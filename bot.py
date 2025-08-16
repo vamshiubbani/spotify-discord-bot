@@ -8,17 +8,21 @@ import os
 import json
 import base64
 import re
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # ======================
 # SPOTIFY CONFIG
 # ======================
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-REDIRECT_URI = "http://127.0.0.1:8888/callback" # Corrected the IP address
+
+# Dynamically set the redirect URI for public hosting
+if "RAILWAY_PUBLIC_DOMAIN" in os.environ:
+    REDIRECT_URI = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}/callback"
+else:
+    # Fallback for local development if needed
+    REDIRECT_URI = "http://127.0.0.1:8888/callback"
+
+
 TOKEN_FILE = "spotify_tokens.json"
 
 access_token = None
@@ -35,7 +39,7 @@ def save_tokens(token_data):
     # Refresh token might not always be sent, so only update if it exists
     if "refresh_token" in token_data:
         refresh_token = token_data.get("refresh_token")
-    
+
     # Save the current valid tokens
     with open(TOKEN_FILE, "w") as f:
         json.dump({
@@ -58,10 +62,10 @@ def refresh_spotify_token():
     """Uses the refresh token to get a new access token."""
     if not refresh_token:
         return False
-    
+
     print("Attempting to refresh Spotify token...")
     token_url = "https://accounts.spotify.com/api/token"
-    
+
     # Correctly encode client_id:client_secret for the Authorization header
     auth_string = f"{CLIENT_ID}:{CLIENT_SECRET}"
     auth_bytes = auth_string.encode("utf-8")
@@ -75,9 +79,9 @@ def refresh_spotify_token():
         "grant_type": "refresh_token",
         "refresh_token": refresh_token
     }
-    
+
     response = requests.post(token_url, headers=headers, data=data)
-    
+
     if response.status_code == 200:
         new_token_data = response.json()
         save_tokens(new_token_data)
@@ -114,7 +118,9 @@ def callback():
         return f"Error authorizing: {response.text}"
 
 def run_flask():
-    flask_app.run(port=8888)
+    # Use the PORT provided by the hosting service (like Railway)
+    port = int(os.environ.get('PORT', 8888))
+    flask_app.run(host='0.0.0.0', port=port)
 
 # ======================
 # DISCORD BOT
@@ -168,7 +174,7 @@ async def help(ctx):
               "`!roll` - Roll a six-sided die.",
         inline=False
     )
-    
+
     embed.add_field(
         name="🎵 Spotify Setup",
         value="`!spotify_login` - Authorize your Spotify account.\n"
@@ -195,7 +201,7 @@ async def help(ctx):
               "`!lyrics` - Get lyrics for the current song.",
         inline=False
     )
-    
+
     embed.set_footer(text="Remember to run !spotify_login first!")
     await ctx.send(embed=embed)
 
@@ -215,7 +221,7 @@ async def spotify_login(ctx):
         "user-top-read"
     ]
     scope_str = "%20".join(scopes)
-    
+
     auth_url = (
         f"https://accounts.spotify.com/authorize"
         f"?client_id={CLIENT_ID}"
@@ -242,11 +248,11 @@ async def handle_spotify_error(ctx, response):
     try:
         error_data = response.json()
         reason = error_data.get("error", {}).get("reason")
-        
+
         if reason == "PREMIUM_REQUIRED":
             await ctx.send("❌ This command requires a Spotify Premium account.")
             return
-        
+
         if reason == "NO_ACTIVE_DEVICE":
             await ctx.send("❌ No active Spotify device found! Please start playing music on a device.")
             return
@@ -275,7 +281,7 @@ async def spotify_pause(ctx):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.put("https://api.spotify.com/v1/me/player/pause", headers=headers)
-    
+
     if response.status_code == 204:
         await ctx.send("⏸️ Song paused!")
     else:
@@ -289,7 +295,7 @@ async def play(ctx, *, song_query: str = None):
         return
 
     headers = {"Authorization": f"Bearer {access_token}"}
-    
+
     # If no song is provided, just resume playback
     if song_query is None:
         response = requests.put("https://api.spotify.com/v1/me/player/play", headers=headers)
@@ -302,11 +308,11 @@ async def play(ctx, *, song_query: str = None):
     # If a song is provided, search for it and play it
     search_url = f"https://api.spotify.com/v1/search?q={song_query}&type=track&limit=1"
     response = requests.get(search_url, headers=headers)
-    
+
     if response.status_code != 200:
         await ctx.send("⚠️ Could not search for the song.")
         return
-        
+
     results = response.json()
     tracks = results.get("tracks", {}).get("items", [])
 
@@ -316,7 +322,7 @@ async def play(ctx, *, song_query: str = None):
 
     track_uri = tracks[0]["uri"]
     track_name = tracks[0]["name"]
-    
+
     play_data = json.dumps({"uris": [track_uri]})
     play_response = requests.put("https://api.spotify.com/v1/me/player/play", headers=headers, data=play_data)
 
@@ -335,7 +341,7 @@ async def spotify_next(ctx):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.post("https://api.spotify.com/v1/me/player/next", headers=headers)
-    
+
     if response.status_code == 204:
         await ctx.send("⏭️ Skipped to next track!")
     else:
@@ -351,7 +357,7 @@ async def spotify_previous(ctx):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.post("https://api.spotify.com/v1/me/player/previous", headers=headers)
-    
+
     if response.status_code == 204:
         await ctx.send("⏮️ Went back to previous track!")
     else:
@@ -370,7 +376,7 @@ async def spotify_volume(ctx, volume: int):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.put(f"https://api.spotify.com/v1/me/player/volume?volume_percent={volume}", headers=headers)
-    
+
     if response.status_code == 204:
         await ctx.send(f"🔊 Volume set to {volume}%")
     else:
@@ -386,12 +392,12 @@ async def queue(ctx, *, song_query: str):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     search_url = f"https://api.spotify.com/v1/search?q={song_query}&type=track&limit=1"
-    
+
     response = requests.get(search_url, headers=headers)
     if response.status_code != 200:
         await ctx.send("⚠️ Could not search for the song.")
         return
-        
+
     results = response.json()
     tracks = results.get("tracks", {}).get("items", [])
 
@@ -401,7 +407,7 @@ async def queue(ctx, *, song_query: str):
 
     track_uri = tracks[0]["uri"]
     track_name = tracks[0]["name"]
-    
+
     queue_url = f"https://api.spotify.com/v1/me/player/queue?uri={track_uri}"
     queue_response = requests.post(queue_url, headers=headers)
 
@@ -454,7 +460,7 @@ async def save(ctx):
     headers = {"Authorization": f"Bearer {access_token}"}
     # First, get the current song
     current_song_response = requests.get("https://api.spotify.com/v1/me/player/currently-playing", headers=headers)
-    
+
     if current_song_response.status_code != 200:
         await ctx.send("⚠️ Could not get the currently playing song.")
         return
@@ -464,7 +470,7 @@ async def save(ctx):
     if not item:
         await ctx.send("Nothing is currently playing to save.")
         return
-    
+
     track_id = item['id']
     track_name = item['name']
 
@@ -488,7 +494,7 @@ async def recommend(ctx):
     headers = {"Authorization": f"Bearer {access_token}"}
     # First, get the current song to use as a seed
     current_song_response = requests.get("https://api.spotify.com/v1/me/player/currently-playing", headers=headers)
-    
+
     if current_song_response.status_code != 200:
         await ctx.send("⚠️ Could not get the currently playing song to base recommendations on.")
         return
@@ -500,7 +506,7 @@ async def recommend(ctx):
         return
 
     seed_track_id = item['id']
-    
+
     # Get recommendations
     rec_url = f"https://api.spotify.com/v1/recommendations?limit=5&seed_tracks={seed_track_id}"
     rec_response = requests.get(rec_url, headers=headers)
@@ -511,7 +517,7 @@ async def recommend(ctx):
 
     rec_data = rec_response.json()
     tracks = rec_data.get('tracks', [])
-    
+
     if not tracks:
         await ctx.send("Could not find any recommendations.")
         return
@@ -524,7 +530,7 @@ async def recommend(ctx):
         track_name = track['name']
         artists = ", ".join([artist['name'] for artist in track['artists']])
         embed.add_field(name=track_name, value=f"by *{artists}*", inline=False)
-        
+
     await ctx.send(embed=embed)
 
 # New command: Get lyrics
@@ -538,7 +544,7 @@ async def lyrics(ctx):
     headers = {"Authorization": f"Bearer {access_token}"}
     # First, get the current song
     current_song_response = requests.get("https://api.spotify.com/v1/me/player/currently-playing", headers=headers)
-    
+
     if current_song_response.status_code != 200:
         await ctx.send("⚠️ Could not get the currently playing song.")
         return
@@ -548,7 +554,7 @@ async def lyrics(ctx):
     if not item:
         await ctx.send("Nothing is currently playing.")
         return
-        
+
     # Clean up artist and title for a better search
     artist = item['artists'][0]['name']
     title = item['name']
@@ -560,11 +566,11 @@ async def lyrics(ctx):
     # Fetch lyrics from lyrics.ovh API
     lyrics_url = f"https://api.lyrics.ovh/v1/{artist}/{title_cleaned}"
     lyrics_response = requests.get(lyrics_url)
-    
+
     if lyrics_response.status_code == 200:
         lyrics_data = lyrics_response.json()
         song_lyrics = lyrics_data.get('lyrics')
-        
+
         if not song_lyrics:
             await ctx.send(f"❌ Could not find lyrics for **{title}**.")
             return
@@ -606,12 +612,12 @@ async def on_presence_update(before, after):
 
             embed = discord.Embed(
                 title=f"{after.display_name} is vibing 🎶",
-                description=f"**{after_spotify.title}**\nby *{', '.join(after_spotify.artists)}*",
+                description=f"**{after.spotify.title}**\nby *{', '.join(after.spotify.artists)}*",
                 color=0x1DB954
             )
-            embed.add_field(name="Album", value=after_spotify.album, inline=False)
-            embed.set_thumbnail(url=after_spotify.album_cover_url)
-            embed.set_footer(text="Powered by Spotify 🎧")
+            embed.add_field(name="Album", value=after.spotify.album, inline=False)
+            embed.set_thumbnail(url=after.spotify.album_cover_url)
+            embed.set_footer(text="Powered by Spotify �")
 
             await channel.send(embed=embed)
 
@@ -620,6 +626,7 @@ async def on_presence_update(before, after):
 # ======================
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()  # run Flask in background
-    
+
     bot_token = os.getenv("DISCORD_BOT_TOKEN")
     bot.run(bot_token)
+�
