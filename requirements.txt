@@ -2,3 +2,4 @@ discord.py
 requests
 Flask
 python-dotenv
+redis
