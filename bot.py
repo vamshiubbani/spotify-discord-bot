@@ -609,7 +609,7 @@ async def on_presence_update(before, after):
                 return
 
             embed = discord.Embed(
-                title=f"{after.display_name} is vibing �",
+                title=f"{after.display_name} is vibing 🎶",
                 # Use the 'after_spotify' variable to get song details
                 description=f"**{after_spotify.title}**\nby *{', '.join(after_spotify.artists)}*",
                 color=0x1DB954
@@ -628,4 +628,3 @@ if __name__ == "__main__":
 
     bot_token = os.getenv("DISCORD_BOT_TOKEN")
     bot.run(bot_token)
-
