@@ -17,7 +17,7 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 # IMPORTANT: Manually set your public Render URL here.
-REDIRECT_URI = "https://spotify-discord-bot-u2td.onrender.com/callback"
+REDIRECT_URI = "https://spotify-discord-bot-lmhu.onrender.com/callback"
 
 
 TOKEN_FILE = "spotify_tokens.json"
@@ -501,3 +501,4 @@ if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     bot_token = os.getenv("DISCORD_BOT_TOKEN")
     bot.run(bot_token)
+
