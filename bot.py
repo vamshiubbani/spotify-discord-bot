@@ -629,4 +629,4 @@ if __name__ == "__main__":
 
     bot_token = os.getenv("DISCORD_BOT_TOKEN")
     bot.run(bot_token)
-�
+
