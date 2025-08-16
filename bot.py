@@ -8,10 +8,6 @@ import os
 import json
 import base64
 import re
-from dotenv import load_dotenv
-
-# Load environment variables from your local .env file
-load_dotenv()
 
 # ======================
 # SPOTIFY CONFIG
@@ -19,8 +15,14 @@ load_dotenv()
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-# Set the redirect URI for local development
-REDIRECT_URI = "http://127.0.0.1:8888/callback"
+# Dynamically set the redirect URI for public hosting on Render
+# This is the definitive fix for public hosting.
+if "RENDER_EXTERNAL_URL" in os.environ:
+    REDIRECT_URI = f"{os.getenv('RENDER_EXTERNAL_URL')}/callback"
+else:
+    # Fallback for other platforms or if you set a custom domain
+    # You might need to set a REDIRECT_URI environment variable manually on other platforms
+    REDIRECT_URI = os.getenv("REDIRECT_URI", "http://127.0.0.1:8888/callback")
 
 
 TOKEN_FILE = "spotify_tokens.json"
@@ -118,8 +120,9 @@ def callback():
         return f"Error authorizing: {response.text}"
 
 def run_flask():
-    # Run on port 8888 for local development
-    flask_app.run(port=8888)
+    # Use the PORT provided by the hosting service
+    port = int(os.environ.get('PORT', 8080))
+    flask_app.run(host='0.0.0.0', port=port)
 
 # ======================
 # DISCORD BOT
