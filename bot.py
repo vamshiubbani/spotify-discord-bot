@@ -8,6 +8,10 @@ import os
 import json
 import base64
 import re
+from dotenv import load_dotenv
+
+# Load environment variables from your local .env file
+load_dotenv()
 
 # ======================
 # SPOTIFY CONFIG
@@ -15,12 +19,8 @@ import re
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-# Dynamically set the redirect URI for public hosting
-if "RAILWAY_PUBLIC_DOMAIN" in os.environ:
-    REDIRECT_URI = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}/callback"
-else:
-    # Fallback for local development if needed
-    REDIRECT_URI = "http://127.0.0.1:8888/callback"
+# Set the redirect URI for local development
+REDIRECT_URI = "http://127.0.0.1:8888/callback"
 
 
 TOKEN_FILE = "spotify_tokens.json"
@@ -118,9 +118,8 @@ def callback():
         return f"Error authorizing: {response.text}"
 
 def run_flask():
-    # Use the PORT provided by the hosting service (like Railway)
-    port = int(os.environ.get('PORT', 8888))
-    flask_app.run(host='0.0.0.0', port=port)
+    # Run on port 8888 for local development
+    flask_app.run(port=8888)
 
 # ======================
 # DISCORD BOT
@@ -617,7 +616,7 @@ async def on_presence_update(before, after):
             )
             embed.add_field(name="Album", value=after.spotify.album, inline=False)
             embed.set_thumbnail(url=after.spotify.album_cover_url)
-            embed.set_footer(text="Powered by Spotify �")
+            embed.set_footer(text="Powered by Spotify 🎧")
 
             await channel.send(embed=embed)
 
@@ -629,4 +628,3 @@ if __name__ == "__main__":
 
     bot_token = os.getenv("DISCORD_BOT_TOKEN")
     bot.run(bot_token)
-
