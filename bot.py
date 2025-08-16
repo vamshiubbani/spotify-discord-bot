@@ -19,7 +19,7 @@ CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 # IMPORTANT: Manually set your public Render URL here.
 # This is the definitive fix for the "Invalid redirect URI" error.
 # Example: "https://my-cool-bot.onrender.com/callback"
-REDIRECT_URI = "https://spotify-discord-bot-lmhu.onrender.com/callback"
+REDIRECT_URI = "https://discordbot.vamsiuday199.replit.dev/callback"
 
 
 TOKEN_FILE = "spotify_tokens.json"
@@ -503,3 +503,4 @@ if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     bot_token = os.getenv("DISCORD_BOT_TOKEN")
     bot.run(bot_token)
+
