@@ -15,14 +15,10 @@ import re
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-# Dynamically set the redirect URI for public hosting on Render
-# This is the definitive fix for public hosting.
-if "RENDER_EXTERNAL_URL" in os.environ:
-    REDIRECT_URI = f"{os.getenv('RENDER_EXTERNAL_URL')}/callback"
-else:
-    # Fallback for other platforms or if you set a custom domain
-    # You might need to set a REDIRECT_URI environment variable manually on other platforms
-    REDIRECT_URI = os.getenv("REDIRECT_URI", "http://127.0.0.1:8888/callback")
+# IMPORTANT: Manually set your public Render URL here.
+# This is the definitive fix for the "Invalid redirect URI" error.
+# Example: "https://my-cool-bot.onrender.com/callback"
+REDIRECT_URI = "https://spotify-discord-bot-92vw.onrender.com/callback"
 
 
 TOKEN_FILE = "spotify_tokens.json"
