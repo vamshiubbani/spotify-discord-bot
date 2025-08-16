@@ -594,7 +594,7 @@ async def on_presence_update(before, after):
     if after.bot:
         return
 
-    before_spotify = discord.utils.find(lambda a: isinstance(a, discord.Spotify), before.activities)
+    # Correctly find the Spotify activity from the activities list
     after_spotify = discord.utils.find(lambda a: isinstance(a, discord.Spotify), after.activities)
 
     if after_spotify is not None:
@@ -609,12 +609,13 @@ async def on_presence_update(before, after):
                 return
 
             embed = discord.Embed(
-                title=f"{after.display_name} is vibing 🎶",
-                description=f"**{after.spotify.title}**\nby *{', '.join(after.spotify.artists)}*",
+                title=f"{after.display_name} is vibing �",
+                # Use the 'after_spotify' variable to get song details
+                description=f"**{after_spotify.title}**\nby *{', '.join(after_spotify.artists)}*",
                 color=0x1DB954
             )
-            embed.add_field(name="Album", value=after.spotify.album, inline=False)
-            embed.set_thumbnail(url=after.spotify.album_cover_url)
+            embed.add_field(name="Album", value=after_spotify.album, inline=False)
+            embed.set_thumbnail(url=after_spotify.album_cover_url)
             embed.set_footer(text="Powered by Spotify 🎧")
 
             await channel.send(embed=embed)
